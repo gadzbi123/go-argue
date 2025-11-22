@@ -172,7 +172,7 @@ func (m debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		// Switch to the opposite model
-		m.switchTurn()
+		m = m.switchTurn()
 
 		// Trigger next turn
 		m.isGenerating = true
@@ -188,7 +188,7 @@ func (m debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Preserve existing history (already done by not modifying it)
 
 		// Attempt to continue with next turn if recoverable
-		m.switchTurn()
+		m = m.switchTurn()
 		m.isGenerating = true
 		return m, m.generateResponse()
 
@@ -210,7 +210,18 @@ func (m debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View renders the UI
 func (m debateModel) View() string {
-	return "AI Debate CLI - Coming soon"
+	switch m.state {
+	case stateInput:
+		return m.renderInputView()
+	case stateDebating:
+		return m.renderDebateView()
+	case stateStopped:
+		return m.renderStoppedView()
+	case stateError:
+		return m.renderErrorView()
+	default:
+		return "Unknown state"
+	}
 }
 
 // getNextModel returns the name of the model that should speak next.
@@ -224,12 +235,14 @@ func (m debateModel) getNextModel() string {
 }
 
 // switchTurn toggles the current turn between model1 (0) and model2 (1).
-func (m *debateModel) switchTurn() {
+// It returns the updated model.
+func (m debateModel) switchTurn() debateModel {
 	if m.currentTurn == 0 {
 		m.currentTurn = 1
 	} else {
 		m.currentTurn = 0
 	}
+	return m
 }
 
 // generateResponse starts generating a response from the current model.

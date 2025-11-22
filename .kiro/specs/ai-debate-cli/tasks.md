@@ -108,7 +108,7 @@
     - **Property 1: Topic validation rejects empty input**
     - **Validates: Requirements 1.2**
   
-  - [ ]* 7.3 Write property test for model initialization
+  - [x] 7.3 Write property test for model initialization
     - **Property 2: Valid topics initialize both models**
     - **Validates: Requirements 1.3**
   
@@ -179,8 +179,8 @@
     - Pass other keys to text input component
     - _Requirements: 5.1, 1.2_
 
-- [ ] 8. Implement Bubbletea View function
-  - [ ] 8.1 Create view rendering for input state
+- [x] 8. Implement Bubbletea View function
+  - [x] 8.1 Create view rendering for input state
     - Display welcome message
     - Render text input for topic
     - Show model names
@@ -190,7 +190,7 @@
     - **Property 3: Topic appears in rendered output**
     - **Validates: Requirements 1.4**
   
-  - [ ] 8.3 Create view rendering for debating state
+  - [x] 8.3 Create view rendering for debating state
     - Render debate topic header
     - Display all turns with formatting
     - Show generation indicator for active model
@@ -205,7 +205,7 @@
     - **Property 9: Generation indicator shows active model**
     - **Validates: Requirements 3.4**
   
-  - [ ] 8.6 Create turn formatting function
+  - [x] 8.6 Create turn formatting function
     - Add model name label
     - Apply distinct styling per model (colors, borders)
     - Include timestamp
@@ -220,13 +220,13 @@
     - **Property 10: Turns include timestamps**
     - **Validates: Requirements 3.5**
   
-  - [ ] 8.9 Create view rendering for stopped state
+  - [x] 8.9 Create view rendering for stopped state
     - Display final debate history
     - Show stop confirmation message
     - Provide exit instructions
     - _Requirements: 5.2, 5.4_
   
-  - [ ] 8.10 Create view rendering for error state
+  - [x] 8.10 Create view rendering for error state
     - Display error message prominently
     - Show existing debate history
     - Provide recovery or exit options
@@ -238,19 +238,19 @@
     - Test error message display
     - _Requirements: 1.1, 3.1, 7.1_
 
-- [ ] 9. Implement main application entry point
-  - [ ] 9.1 Create command-line flag parsing
+- [x] 9. Implement main application entry point
+  - [x] 9.1 Create command-line flag parsing
     - Add flags for model1 and model2 names
     - Set defaults to mistral:7b and gemma3:4b
     - Add help text
     - _Requirements: 2.1, 2.5_
   
-  - [ ] 9.2 Implement model validation at startup
+  - [x] 9.2 Implement model validation at startup
     - Validate both models are available
     - Display error and exit if models not found
     - _Requirements: 2.2, 2.3_
   
-  - [ ] 9.3 Initialize and run Bubbletea program
+  - [x] 9.3 Initialize and run Bubbletea program
     - Create initial model with validated models
     - Configure Bubbletea program options
     - Run program and handle exit
