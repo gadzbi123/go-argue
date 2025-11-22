@@ -7,7 +7,9 @@ type topicSubmittedMsg struct {
 
 // responseChunkMsg is sent when a response chunk arrives
 type responseChunkMsg struct {
-	chunk string
+	chunk        string
+	responseChan <-chan string
+	errorChan    <-chan error
 }
 
 // responseCompleteMsg is sent when a response is complete

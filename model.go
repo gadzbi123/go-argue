@@ -64,8 +64,8 @@ func (m *debateModel) Init() tea.Cmd {
 	m.textInput = textinput.New()
 	m.textInput.Placeholder = "Enter a debate topic..."
 	m.textInput.Focus()
-	m.textInput.CharLimit = 200
-	m.textInput.Width = 50
+	m.textInput.CharLimit = 0
+	m.textInput.Width = 80
 
 	// Initialize viewport for debate view
 	m.viewport = viewport.New(80, 20)
@@ -151,7 +151,7 @@ func (m *debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 			// Continue listening for more chunks
-			return m, m.generateResponse()
+			return m, waitForNextChunk(msg.responseChan, msg.errorChan)
 		}
 
 	// Handle response completion (when channel closes)
@@ -243,7 +243,12 @@ func (m *debateModel) generateResponse() tea.Cmd {
 	ctx := context.Background()
 	responseChan, errorChan := m.ollamaClient.GenerateResponse(ctx, modelName, prompt)
 
-	// Return a command that listens to the channels and sends messages
+	// Return a command that waits for the first chunk
+	return waitForNextChunk(responseChan, errorChan)
+}
+
+// waitForNextChunk waits for the next chunk from the response channels
+func waitForNextChunk(responseChan <-chan string, errorChan <-chan error) tea.Cmd {
 	return func() tea.Msg {
 		select {
 		case chunk, ok := <-responseChan:
@@ -251,29 +256,19 @@ func (m *debateModel) generateResponse() tea.Cmd {
 				// Channel closed, response complete
 				return responseCompleteMsg{}
 			}
-			// Send chunk to UI
-			return responseChunkMsg{chunk: chunk}
+			// Send chunk to UI with channels for continuation
+			return responseChunkMsg{
+				chunk:        chunk,
+				responseChan: responseChan,
+				errorChan:    errorChan,
+			}
 
 		case err, ok := <-errorChan:
 			if ok && err != nil {
 				return responseErrorMsg{err: err}
 			}
-			return nil
+			// Error channel closed without error, wait for response channel
+			return waitForNextChunk(responseChan, errorChan)()
 		}
 	}
-}
-
-// formatDebateHistory formats the debate history for display in the viewport
-func (m *debateModel) formatDebateHistory() string {
-	var output strings.Builder
-
-	for _, turn := range m.history {
-		output.WriteString(fmt.Sprintf("[%s]: %s\n\n", turn.ModelName, turn.Content))
-	}
-
-	if m.isGenerating {
-		output.WriteString(fmt.Sprintf("[%s is thinking...]\n", m.getNextModel()))
-	}
-
-	return output.String()
 }
