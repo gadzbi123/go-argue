@@ -1,19 +1,19 @@
 # Implementation Plan
 
-- [ ] 1. Initialize Go project and dependencies
+- [x] 1. Initialize Go project and dependencies
   - Create Go module with `go mod init`
   - Add Bubbletea, Lipgloss, and Bubbles dependencies
   - Add gopter for property-based testing
   - Create basic project structure (main.go, model.go, ollama.go, etc.)
   - _Requirements: 8.1_
 
-- [ ] 2. Implement Ollama client
-  - [ ] 2.1 Create OllamaClient struct with HTTP client
+- [x] 2. Implement Ollama client
+  - [x] 2.1 Create OllamaClient struct with HTTP client
     - Implement NewOllamaClient constructor
     - Configure base URL (default: http://localhost:11434)
     - _Requirements: 2.2, 7.1_
   
-  - [ ] 2.2 Implement model validation
+  - [x] 2.2 Implement model validation
     - Create ValidateModel function to check model availability
     - Implement ListModels to fetch available models from Ollama
     - Handle connection errors gracefully
@@ -23,27 +23,27 @@
     - **Property 4: Model validation identifies availability**
     - **Validates: Requirements 2.2**
   
-  - [ ] 2.4 Implement streaming response generation
+  - [x] 2.4 Implement streaming response generation
     - Create GenerateResponse function with context support
     - Parse newline-delimited JSON responses
     - Return channels for response chunks and errors
     - Handle streaming interruptions
     - _Requirements: 4.2, 7.2_
   
-  - [ ]* 2.5 Write unit tests for Ollama client
+  - [x] 2.5 Write unit tests for Ollama client
     - Test HTTP request formatting
     - Test response parsing
     - Test error handling for network failures
     - _Requirements: 7.1, 7.2_
 
-- [ ] 3. Implement prompt builder
-  - [ ] 3.1 Create prompt building functions
+- [-] 3. Implement prompt builder
+  - [x] 3.1 Create prompt building functions
     - Implement BuildDebatePrompt with topic and history
     - Implement FormatHistory to structure conversation context
     - Add debate instructions and position assignment
     - _Requirements: 9.1, 9.4_
   
-  - [ ]* 3.2 Write property test for context completeness
+  - [x] 3.2 Write property test for context completeness
     - **Property 12: Context includes full history**
     - **Validates: Requirements 4.2, 4.3, 9.1**
   
@@ -61,19 +61,19 @@
     - Test first turn position assignment
     - _Requirements: 9.1, 9.2, 9.4_
 
-- [ ] 4. Implement core data models
-  - [ ] 4.1 Define Turn and DebateContext structs
+- [x] 4. Implement core data models
+  - [x] 4.1 Define Turn and DebateContext structs
     - Create Turn with ModelName, Content, Timestamp
     - Create DebateContext with Topic and History
     - _Requirements: 3.5, 4.3_
   
-  - [ ] 4.2 Define Bubbletea model structure
+  - [x] 4.2 Define Bubbletea model structure
     - Create debateModel with all state fields
     - Define appState enum (input, debating, stopped, error)
     - Initialize viewport and textInput components
     - _Requirements: 8.5_
   
-  - [ ] 4.3 Implement turn alternation logic
+  - [x] 4.3 Implement turn alternation logic
     - Create function to determine next model
     - Ensure alternation between model1 and model2
     - _Requirements: 4.1_
@@ -82,23 +82,23 @@
     - **Property 11: Turns alternate between models**
     - **Validates: Requirements 4.1**
 
-- [ ] 5. Implement message types
-  - [ ] 5.1 Define all Bubbletea message types
+- [x] 5. Implement message types
+  - [x] 5.1 Define all Bubbletea message types
     - Create topicSubmittedMsg
     - Create responseChunkMsg and responseCompleteMsg
     - Create responseErrorMsg and nextTurnMsg
     - Create stopDebateMsg
     - _Requirements: 8.3_
 
-- [ ] 6. Implement Bubbletea Init function
-  - [ ] 6.1 Create Init method for debateModel
+- [x] 6. Implement Bubbletea Init function
+  - [x] 6.1 Create Init method for debateModel
     - Initialize text input for topic entry
     - Set initial state to stateInput
     - Return initial command (focus text input)
     - _Requirements: 1.1, 8.2_
 
-- [ ] 7. Implement Bubbletea Update function
-  - [ ] 7.1 Handle topic submission
+- [x] 7. Implement Bubbletea Update function
+  - [x] 7.1 Handle topic submission
     - Validate topic is non-empty
     - Transition to debating state
     - Start first model generation
@@ -116,7 +116,7 @@
     - **Property 5: Valid models proceed to topic selection**
     - **Validates: Requirements 2.4**
   
-  - [ ] 7.5 Handle response chunks
+  - [x] 7.5 Handle response chunks
     - Append chunks to current turn content
     - Update viewport with new content
     - Maintain UI responsiveness
@@ -126,13 +126,13 @@
     - **Property 8: New responses append to history**
     - **Validates: Requirements 3.3**
   
-  - [ ] 7.7 Handle response completion
+  - [x] 7.7 Handle response completion
     - Add completed turn to history
     - Trigger next turn with opposite model
     - Reset generation state
     - _Requirements: 4.1, 4.2_
   
-  - [ ] 7.8 Handle errors
+  - [x] 7.8 Handle errors
     - Display error message in UI
     - Preserve existing history
     - Attempt to continue with next turn if recoverable
@@ -146,7 +146,7 @@
     - **Property 18: Errors preserve history integrity**
     - **Validates: Requirements 7.4**
   
-  - [ ] 7.11 Handle stop command
+  - [x] 7.11 Handle stop command
     - Cancel ongoing generation
     - Transition to stopped state
     - Close Ollama connections
@@ -164,7 +164,7 @@
     - **Property 15: Stop preserves history**
     - **Validates: Requirements 5.4**
   
-  - [ ] 7.15 Handle terminal resize
+  - [x]* 7.15 Handle terminal resize
     - Update model width and height
     - Resize viewport component
     - _Requirements: 6.5_
@@ -173,7 +173,7 @@
     - **Property 16: Terminal resize updates layout**
     - **Validates: Requirements 6.5**
   
-  - [ ] 7.17 Handle keyboard input
+  - [x] 7.17 Handle keyboard input
     - Process 'q' or Ctrl+C for stop
     - Handle Enter for topic submission
     - Pass other keys to text input component
