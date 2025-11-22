@@ -51,7 +51,7 @@ func FormatHistory(history []Turn) string {
 	var formatted strings.Builder
 
 	for i, turn := range history {
-		formatted.WriteString(fmt.Sprintf("[%s]: %s", turn.ModelName, turn.Content))
+		formatted.WriteString(fmt.Sprintf("%s", turn.Content))
 
 		// Add newline between turns, but not after the last one
 		if i < len(history)-1 {

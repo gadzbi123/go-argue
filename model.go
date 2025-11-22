@@ -71,6 +71,14 @@ func (m *debateModel) Init() tea.Cmd {
 	m.viewport = viewport.New(80, 20)
 	m.viewport.YPosition = 0
 
+	// Set default dimensions (will be updated by WindowSizeMsg)
+	if m.width == 0 {
+		m.width = 80
+	}
+	if m.height == 0 {
+		m.height = 24
+	}
+
 	m.state = stateInput
 
 	// Return command to focus the text input

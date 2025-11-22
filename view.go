@@ -96,10 +96,16 @@ func (m *debateModel) renderDebateView() string {
 	b.WriteString(headerStyle.Render(fmt.Sprintf("📢 Debate Topic: %s", m.topic)))
 	b.WriteString("\n\n")
 
+	// Use viewport width for content formatting
+	viewportWidth := m.viewport.Width
+	if viewportWidth == 0 {
+		viewportWidth = m.width
+	}
+
 	// Display all turns with formatting
 	for i, turn := range m.history {
 		isModel1 := turn.ModelName == m.model1Name
-		b.WriteString(formatTurn(turn, isModel1))
+		b.WriteString(formatTurn(turn, isModel1, viewportWidth))
 		b.WriteString("\n")
 
 		// Add spacing between turns
@@ -155,7 +161,7 @@ func (m *debateModel) renderStoppedView() string {
 
 	for i, turn := range m.history {
 		isModel1 := turn.ModelName == m.model1Name
-		b.WriteString(formatTurn(turn, isModel1))
+		b.WriteString(formatTurn(turn, isModel1, m.width))
 		b.WriteString("\n")
 
 		// Add spacing between turns
@@ -188,7 +194,7 @@ func (m *debateModel) renderErrorView() string {
 
 		for i, turn := range m.history {
 			isModel1 := turn.ModelName == m.model1Name
-			b.WriteString(formatTurn(turn, isModel1))
+			b.WriteString(formatTurn(turn, isModel1, m.width))
 			b.WriteString("\n")
 
 			// Add spacing between turns
@@ -206,7 +212,7 @@ func (m *debateModel) renderErrorView() string {
 }
 
 // formatTurn formats a single turn for display
-func formatTurn(turn Turn, isModel1 bool) string {
+func formatTurn(turn Turn, isModel1 bool, width int) string {
 	var b strings.Builder
 
 	// Format timestamp
@@ -230,8 +236,16 @@ func formatTurn(turn Turn, isModel1 bool) string {
 	b.WriteString(timestampStyle.Render(fmt.Sprintf("[%s]", timestamp)))
 	b.WriteString("\n")
 
-	// Format content with proper wrapping
-	b.WriteString(contentStyle.Render(turn.Content))
+	// Calculate available width for content (accounting for border and padding)
+	// Border takes 2 chars (left + right), padding takes 2 chars (1 on each side)
+	// Also leave some margin for the viewport scrollbar
+	contentWidth := width - 6
+	if contentWidth < 20 {
+		contentWidth = 20 // Minimum width
+	}
+
+	// Format content with proper wrapping and width constraint
+	b.WriteString(contentStyle.Width(contentWidth).Render(turn.Content))
 
 	return b.String()
 }
