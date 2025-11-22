@@ -10,7 +10,7 @@ import (
 
 func main() {
 	// Parse command-line flags
-	model1 := flag.String("model1", "mistral:7b", "First AI model for the debate")
+	model1 := flag.String("model1", "gemma3n:e4b", "First AI model for the debate")
 	model2 := flag.String("model2", "gemma3:4b", "Second AI model for the debate")
 	flag.Parse()
 
@@ -46,7 +46,7 @@ func main() {
 	}
 
 	// Configure and run Bubbletea program
-	p := tea.NewProgram(initialModel, tea.WithAltScreen())
+	p := tea.NewProgram(&initialModel, tea.WithAltScreen())
 
 	// Run program and handle exit
 	if _, err := p.Run(); err != nil {

@@ -59,15 +59,18 @@ type debateModel struct {
 }
 
 // Init initializes the model
-func (m debateModel) Init() tea.Cmd {
+func (m *debateModel) Init() tea.Cmd {
 	// Initialize text input for topic entry
-	ti := textinput.New()
-	ti.Placeholder = "Enter a debate topic..."
-	ti.Focus()
-	ti.CharLimit = 200
-	ti.Width = 50
+	m.textInput = textinput.New()
+	m.textInput.Placeholder = "Enter a debate topic..."
+	m.textInput.Focus()
+	m.textInput.CharLimit = 200
+	m.textInput.Width = 50
 
-	m.textInput = ti
+	// Initialize viewport for debate view
+	m.viewport = viewport.New(80, 20)
+	m.viewport.YPosition = 0
+
 	m.state = stateInput
 
 	// Return command to focus the text input
@@ -75,7 +78,7 @@ func (m debateModel) Init() tea.Cmd {
 }
 
 // Update handles messages and updates the model
-func (m debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
@@ -147,32 +150,16 @@ func (m debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				})
 			}
 
-			// Update viewport with new content
-			m.viewport.SetContent(m.formatDebateHistory())
-			m.viewport.GotoBottom()
+			// Continue listening for more chunks
+			return m, m.generateResponse()
 		}
 
-	// Handle response completion
+	// Handle response completion (when channel closes)
 	case responseCompleteMsg:
 		m.isGenerating = false
 
-		// Ensure the turn is properly recorded in history
-		if len(m.history) == 0 || m.history[len(m.history)-1].Content != msg.fullResponse {
-			// If the last turn doesn't match, update or create it
-			if len(m.history) > 0 && m.history[len(m.history)-1].ModelName == m.getNextModel() {
-				m.history[len(m.history)-1].Content = msg.fullResponse
-				m.history[len(m.history)-1].Timestamp = time.Now()
-			} else {
-				m.history = append(m.history, Turn{
-					ModelName: m.getNextModel(),
-					Content:   msg.fullResponse,
-					Timestamp: time.Now(),
-				})
-			}
-		}
-
 		// Switch to the opposite model
-		m = m.switchTurn()
+		m.switchTurn()
 
 		// Trigger next turn
 		m.isGenerating = true
@@ -188,7 +175,7 @@ func (m debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Preserve existing history (already done by not modifying it)
 
 		// Attempt to continue with next turn if recoverable
-		m = m.switchTurn()
+		m.switchTurn()
 		m.isGenerating = true
 		return m, m.generateResponse()
 
@@ -209,7 +196,7 @@ func (m debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // View renders the UI
-func (m debateModel) View() string {
+func (m *debateModel) View() string {
 	switch m.state {
 	case stateInput:
 		return m.renderInputView()
@@ -227,7 +214,7 @@ func (m debateModel) View() string {
 // getNextModel returns the name of the model that should speak next.
 // It alternates between model1 and model2 based on the current turn counter.
 // currentTurn 0 means model1, currentTurn 1 means model2.
-func (m debateModel) getNextModel() string {
+func (m *debateModel) getNextModel() string {
 	if m.currentTurn == 0 {
 		return m.model1Name
 	}
@@ -235,56 +222,49 @@ func (m debateModel) getNextModel() string {
 }
 
 // switchTurn toggles the current turn between model1 (0) and model2 (1).
-// It returns the updated model.
-func (m debateModel) switchTurn() debateModel {
+func (m *debateModel) switchTurn() {
 	if m.currentTurn == 0 {
 		m.currentTurn = 1
 	} else {
 		m.currentTurn = 0
 	}
-	return m
 }
 
 // generateResponse starts generating a response from the current model.
 // It returns a Cmd that will send responseChunkMsg and responseCompleteMsg.
-func (m debateModel) generateResponse() tea.Cmd {
+func (m *debateModel) generateResponse() tea.Cmd {
+	modelName := m.getNextModel()
+	isFirstTurn := len(m.history) == 0
+
+	// Build the prompt with full context
+	prompt := BuildDebatePrompt(m.topic, m.history, modelName, isFirstTurn)
+
+	// Generate response using Ollama client
+	ctx := context.Background()
+	responseChan, errorChan := m.ollamaClient.GenerateResponse(ctx, modelName, prompt)
+
+	// Return a command that listens to the channels and sends messages
 	return func() tea.Msg {
-		modelName := m.getNextModel()
-		isFirstTurn := len(m.history) == 0
-
-		// Build the prompt with full context
-		prompt := BuildDebatePrompt(m.topic, m.history, modelName, isFirstTurn)
-
-		// Generate response using Ollama client
-		ctx := context.Background()
-		responseChan, errorChan := m.ollamaClient.GenerateResponse(ctx, modelName, prompt)
-
-		var fullResponse strings.Builder
-
-		// Read from channels
-		for {
-			select {
-			case chunk, ok := <-responseChan:
-				if !ok {
-					// Channel closed, response complete
-					return responseCompleteMsg{fullResponse: fullResponse.String()}
-				}
-				fullResponse.WriteString(chunk)
-				// Send chunk to UI
-				// Note: We're only sending the complete message for simplicity
-				// In a real implementation, we'd send chunks via a different mechanism
-
-			case err, ok := <-errorChan:
-				if ok && err != nil {
-					return responseErrorMsg{err: err}
-				}
+		select {
+		case chunk, ok := <-responseChan:
+			if !ok {
+				// Channel closed, response complete
+				return responseCompleteMsg{}
 			}
+			// Send chunk to UI
+			return responseChunkMsg{chunk: chunk}
+
+		case err, ok := <-errorChan:
+			if ok && err != nil {
+				return responseErrorMsg{err: err}
+			}
+			return nil
 		}
 	}
 }
 
 // formatDebateHistory formats the debate history for display in the viewport
-func (m debateModel) formatDebateHistory() string {
+func (m *debateModel) formatDebateHistory() string {
 	var output strings.Builder
 
 	for _, turn := range m.history {

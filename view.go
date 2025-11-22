@@ -59,7 +59,7 @@ var (
 )
 
 // renderInputView renders the topic input view
-func (m debateModel) renderInputView() string {
+func (m *debateModel) renderInputView() string {
 	var b strings.Builder
 
 	// Welcome message
@@ -89,7 +89,7 @@ func (m debateModel) renderInputView() string {
 }
 
 // renderDebateView renders the active debate view
-func (m debateModel) renderDebateView() string {
+func (m *debateModel) renderDebateView() string {
 	var b strings.Builder
 
 	// Render debate topic header
@@ -142,7 +142,7 @@ func (m debateModel) renderDebateView() string {
 }
 
 // renderStoppedView renders the stopped debate view
-func (m debateModel) renderStoppedView() string {
+func (m *debateModel) renderStoppedView() string {
 	var b strings.Builder
 
 	// Show stop confirmation message
@@ -172,7 +172,7 @@ func (m debateModel) renderStoppedView() string {
 }
 
 // renderErrorView renders the error view
-func (m debateModel) renderErrorView() string {
+func (m *debateModel) renderErrorView() string {
 	var b strings.Builder
 
 	// Display error message prominently
