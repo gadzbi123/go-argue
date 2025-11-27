@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/atotto/clipboard"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -142,7 +143,11 @@ func (m *debateModel) renderDebateView() string {
 	m.viewport.SetContent(b.String())
 
 	// Footer with instructions
-	footer := subtleStyle.Render("Press 'q' or Ctrl+C to stop the debate")
+	autoscrollStatus := "off"
+	if m.autoscroll {
+		autoscrollStatus = "on"
+	}
+	footer := subtleStyle.Render(fmt.Sprintf("Press 'a' to toggle autoscroll [%s] • 'q' or Ctrl+C to stop", autoscrollStatus))
 
 	return fmt.Sprintf("%s\n%s", m.viewport.View(), footer)
 }
@@ -170,11 +175,42 @@ func (m *debateModel) renderStoppedView() string {
 		}
 	}
 
+	// Yank debate to clipboard
+	m.yankDebateToClipboard()
+
 	// Provide exit instructions
 	b.WriteString("\n\n")
+	b.WriteString(subtleStyle.Render("✓ Debate copied to clipboard"))
+	b.WriteString("\n")
 	b.WriteString(subtleStyle.Render("Press any key to exit"))
 
 	return b.String()
+}
+
+// yankDebateToClipboard copies all messages with model names to the clipboard
+func (m *debateModel) yankDebateToClipboard() {
+	var b strings.Builder
+
+	// Add topic header
+	b.WriteString(fmt.Sprintf("Debate Topic: %s\n", m.topic))
+	b.WriteString(strings.Repeat("=", 80))
+	b.WriteString("\n\n")
+
+	// Add all turns with model names
+	for i, turn := range m.history {
+		timestamp := turn.Timestamp.Format("15:04:05")
+		b.WriteString(fmt.Sprintf("[%s] %s:\n", timestamp, turn.ModelName))
+		b.WriteString(turn.Content)
+		b.WriteString("\n")
+
+		// Add spacing between turns
+		if i < len(m.history)-1 {
+			b.WriteString("\n")
+		}
+	}
+
+	// Copy to clipboard
+	_ = clipboard.WriteAll(b.String())
 }
 
 // renderErrorView renders the error view

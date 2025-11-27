@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -48,10 +47,11 @@ type debateModel struct {
 	isGenerating bool
 
 	// UI state
-	state     appState
-	viewport  viewport.Model
-	textInput textinput.Model
-	errorMsg  string
+	state      appState
+	viewport   viewport.Model
+	textInput  textinput.Model
+	errorMsg   string
+	autoscroll bool // When true, viewport automatically scrolls to bottom
 
 	// Dimensions
 	width  int
@@ -89,6 +89,7 @@ func (m *debateModel) Init() tea.Cmd {
 func (m *debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
+	ctx, cancel := context.WithCancel(context.Background())
 
 	switch msg := msg.(type) {
 
@@ -98,10 +99,21 @@ func (m *debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "q":
 			// Handle stop command
 			if m.state == stateDebating {
+				cancel()
 				m.state = stateStopped
-				return m, tea.Quit
+				return m, nil
 			}
 			return m, tea.Quit
+
+		case "a":
+			// Toggle autoscroll when in debating state
+			if m.state == stateDebating || m.state == stateStopped {
+				m.autoscroll = !m.autoscroll
+				if m.autoscroll {
+					m.viewport.GotoBottom()
+				}
+				return m, nil
+			}
 
 		case "enter":
 			// Handle topic submission
@@ -121,7 +133,7 @@ func (m *debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.currentTurn = 0 // Start with model1
 
 				// Start first model generation
-				return m, m.generateResponse()
+				return m, m.generateResponse(ctx)
 			}
 		}
 
@@ -144,7 +156,7 @@ func (m *debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Handle response chunks
 	case responseChunkMsg:
-		if m.isGenerating {
+		if m.isGenerating && m.state == stateDebating {
 			// Append chunk to current turn content
 			if len(m.history) > 0 && m.history[len(m.history)-1].ModelName == m.getNextModel() {
 				// Update the last turn if it's from the current model
@@ -156,6 +168,11 @@ func (m *debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					Content:   msg.chunk,
 					Timestamp: time.Now(),
 				})
+			}
+
+			// Autoscroll to bottom if enabled
+			if m.autoscroll {
+				m.viewport.GotoBottom()
 			}
 
 			// Continue listening for more chunks
@@ -171,21 +188,21 @@ func (m *debateModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// Trigger next turn
 		m.isGenerating = true
-		return m, m.generateResponse()
+		return m, m.generateResponse(ctx)
 
 	// Handle errors
-	case responseErrorMsg:
-		m.isGenerating = false
+	// case responseErrorMsg:
+	// 	m.isGenerating = false
 
-		// Display error message in UI
-		m.errorMsg = fmt.Sprintf("Error: %v", msg.err)
+	// 	// Display error message in UI
+	// 	m.errorMsg = fmt.Sprintf("Error: %v", msg.err)
 
-		// Preserve existing history (already done by not modifying it)
+	// 	// Preserve existing history (already done by not modifying it)
 
-		// Attempt to continue with next turn if recoverable
-		m.switchTurn()
-		m.isGenerating = true
-		return m, m.generateResponse()
+	// 	// Attempt to continue with next turn if recoverable
+	// 	m.switchTurn()
+	// 	m.isGenerating = true
+	// 	return m, m.generateResponse()
 
 	// Handle stop command
 	case stopDebateMsg:
@@ -240,7 +257,7 @@ func (m *debateModel) switchTurn() {
 
 // generateResponse starts generating a response from the current model.
 // It returns a Cmd that will send responseChunkMsg and responseCompleteMsg.
-func (m *debateModel) generateResponse() tea.Cmd {
+func (m *debateModel) generateResponse(ctx context.Context) tea.Cmd {
 	modelName := m.getNextModel()
 	isFirstTurn := len(m.history) == 0
 
@@ -248,7 +265,6 @@ func (m *debateModel) generateResponse() tea.Cmd {
 	prompt := BuildDebatePrompt(m.topic, m.history, modelName, isFirstTurn)
 
 	// Generate response using Ollama client
-	ctx := context.Background()
 	responseChan, errorChan := m.ollamaClient.GenerateResponse(ctx, modelName, prompt)
 
 	// Return a command that waits for the first chunk
@@ -272,6 +288,10 @@ func waitForNextChunk(responseChan <-chan string, errorChan <-chan error) tea.Cm
 			}
 
 		case err, ok := <-errorChan:
+			if !ok {
+				// Channel closed, response complete
+				return responseCompleteMsg{}
+			}
 			if ok && err != nil {
 				return responseErrorMsg{err: err}
 			}
